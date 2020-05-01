@@ -1,0 +1,134 @@
+library(dplyr)
+library(readr)
+library(descr)
+library(data.table)
+
+cuis_index<- read.csv("C:/Users/lilyw/OneDrive - University of Glasgow/Table tidier/data/cuis_index_latest.csv") %>%
+  rename(cu=cui)
+metadata <- read_delim("C:/Users/lilyw/OneDrive - University of Glasgow/Table tidier/data/metadata.csv", 
+                       ";", quote = "'", escape_backslash = TRUE, 
+                       escape_double = FALSE, trim_ws = TRUE)
+
+metadata <- metadata %>% 
+  mutate(paperid = metadata %>% group_by(docid) %>% group_indices()) %>%
+  mutate(tableid = metadata %>% group_by(docid,page) %>% group_indices()) %>%
+  select(paperid,tableid,docid,page,concept,cuis_selected,cuis) %>%
+  rename(pmid=docid)
+metadata$id<- seq.int(nrow(metadata))
+
+disname<- read_delim("C:/Users/lilyw/OneDrive - University of Glasgow/Table tidier/data/pmid_msh_category.csv", 
+                      ";",trim_ws = TRUE)
+metadata<- metadata %>%
+  filter(!is.na(cuis_selected)) %>%
+  as.data.frame()
+metadata2<- metadata
+outtry<- strsplit(as.character(metadata2$cuis_selected),';')
+datasplit<- cbind(metadata2,do.call(rbind,outtry))
+datasplit<- datasplit %>%
+  rename(cu1="1",cu2="2",cu3="3",cu4="4",cu5="5",cu6="6",cu7="7",cu8="8",cu9="9",cu10="10",cu11="11",cu12="12",cu13="13")
+
+cu1<- select(datasplit,id,paperid,cu1)%>%
+  rename(cu="cu1")
+cu2<- select(datasplit,id,paperid,cu2)%>%
+  rename(cu="cu2")
+cu3<- select(datasplit,id,paperid,cu3)%>%
+  rename(cu="cu3")
+cu4<- select(datasplit,id,paperid,cu4)%>%
+  rename(cu="cu4")
+cu5<- select(datasplit,id,paperid,cu5)%>%
+  rename(cu="cu5")
+cu6<- select(datasplit,id,paperid,cu6)%>%
+  rename(cu="cu6")
+cu7<- select(datasplit,id,paperid,cu7)%>%
+  rename(cu="cu7")
+cu8<- select(datasplit,id,paperid,cu8)%>%
+  rename(cu="cu8")
+cu9<- select(datasplit,id,paperid,cu9)%>%
+  rename(cu="cu9")
+cu10<- select(datasplit,id,paperid,cu10)%>%
+  rename(cu="cu10")
+cu11<- select(datasplit,id,paperid,cu11)%>%
+  rename(cu="cu11")
+cu12<- select(datasplit,id,paperid,cu12)%>%
+  rename(cu="cu12")
+cu13<- select(datasplit,id,paperid,cu13)%>%
+  rename(cu="cu13")
+rmdup<- rbind(cu1,cu2,cu3,cu4,cu5,cu6,cu7,cu8,cu9,cu10,cu11,cu12,cu13) %>%
+  group_by(paperid,id) %>%
+  filter(!duplicated(cu)) %>%
+  left_join(metadata2,by=c("id","paperid")) %>%
+  left_join(cuis_index,by="cu") %>%
+  select(id,paperid,tableid,pmid,cu,cuis_selected,preferred,concept,hasMSH)%>%
+  arrange(id)
+
+singlecode<- rmdup %>%
+  filter(cu==cuis_selected) %>%
+  group_by(paperid)%>%
+  filter(!duplicated(concept)) %>%
+  mutate(ageinyear= if_else(cu %in% c("C0001779","C0439234","C1510829","C2348001"),1,0)) %>%#age,year,age-years,year,age cohort,year can be other terms like time since randomasation so still need to come back to deal with it
+  mutate(gender=if_else(cu %in% c("C0086287","C0086582","C1705497","C1705498","C1706180","C1706428","C1706429","C0025266","C4281745","C0150905","C0150904","C0150831","C1522384","C0804628","C0079399","C0043210","C0009253"),1,0)) %>% #females, males,Female Self-Report,Female Phenotype,Male Gender Self Report,Male Phenotype,Male Self-Reported, male population group,Human Female adult,patient is female,patient is male,patient sex,sex,Gender:Type:Point in time:^Patient:Nominal,gender,woman,coitus
+  mutate(race= if_else(cu %in% c("C0007457","C1535514","C0005680","C0027567","C1551421","C1556094","C1556095","C2700615","C1561448","C0034510","C1881928","C1533018","C1533021","C0043157","C0015031","C0243103",#Caucasoid Race,European race,black race,african race,Miami race,Japanese race,Korean race,North American (race),Arab race,Racial group,Multiracial,Hispanic black racial group,Hispanic white racial group,Caucasians,Ethnic group,Ethnicity aspects,ethnic european,CDISC SDTM Patient Ethnic Group Terminology,ethnic,Australian/New Zealand Ethnicity,Americas Ethnicity,arab ethnic group,ethnicity- other,White color,Hispanic Americans,African American,Black color
+                                 "C0239307","C1879937","C0680174","C4289954","C0596070","C0282540","1","C0220938","C0019576","C0085756","C0439541","C0242191","C0596070","C0282204","C1515945","C1553378","C1331005","C0152035","C0078988","C1519427","C1524069","C0239309","C0239307","C0239312","C0002460","C0008120","C0086409"),1,0)) %>% #Pacific Islander Americans,Americas Ethnicity,Native Americans,American Indian or Alaska Native,Latin American,Caribbean natives,Chinese People,Asians,South Asian,Asian Indian,eastern european,ethnic european,western european,american Indians,chinese language(race),hispanics
+  mutate(geolocation= if_else(cu %in% c("C0682132","C0206155","C0043122","C0454693","C0017446","C0018370","C0450429","C0020898","C0027976","C1517526","C4545686","C0023122","C0028405","C0007674","C0037713","C0002454","C0017454","C0003980","C1257882","C0282279","C1442792","C3148680","C0006137","C0037723", #regional difference,Caribbean region,Caribbean Islands,Indian subcontinent,Geographic Locations,Guernsey (geographic location),location,Illinois (geographic location),new york(geographic location),geographic,Geographical location (property),Latin America,North America,Central America,South America,Americas,Georgia, Western Asia,asia,Australasia,Oceania,State,US State,Brazil,Southern Asia
+                                        "C0682369","C0015177","C0015179","C0037724","C0015176","C0043129","C0006823","C0001737","C0008115","C0454664","C0003761","C0032356","C0004340","C0004348","C0004950"),1,0)) %>% #central europe,Europe Eastern,European Union,Southern Europe,Europe,Western Europe,Canada,africa,China,country,Country of Argentina,Country of Poland,Australia,Austria,Belgium
+  mutate(bmi= if_else(cu %in% c("C1305855","C1319441","C0578022"),1,0)) %>% # body mass indix, Body mass index 40+ - severely obese,fingding of bmi,
+  mutate(bodyweight = if_else(cu %in% c("C0005910","C1303013"),1,0)) %>% #body weight,baseline weight
+  mutate(smoke = if_else(cu %in% c("C3241966","C4555205","C0337671","C0750523"),1,0)) %>% ##add concept in "current smoke" and cu in"current",ex-smokers,former smoker,former
+  mutate(bloodpressure= if_else(cu %in% c("C4274438","C0005823","C1271104"),1,0)) %>% #baseline sbp,blood pressure,blood pressure finding(dbp)
+  mutate(crp = if_else(cu %in% c("C0006560","C4048285"),1,0)) %>% #C-reactive protein,C-Reactive Protein human,
+  mutate(bantagonists = if_else(cu %in% c("C0001645","C0004057","C4696290"),1,0)) %>%#Adrenergic beta-Antagonists,aspirin(##use or dosage, need further diff),aspirin dose,
+  mutate(alcohol= if_else(cu %in% c("C0001948","C0552479"),1,0)) %>%#Alcohol consumption,Alcohol use history
+  mutate(angina= if_else(cu %in% c("C0002962","C0002965"),1,0)) %>% #Angina Pectoris,Angina Unstable,
+  mutate(aceinhibitor = if_else(cu %in% c("C0003015","C3536837","C1444755","C0521942","C0034787"),1,0)) %>% #Angiotensin-Converting Enzyme Inhibitors,Angiotensin Converting Enzyme Inhibitor [EPC],Angiotensin converting enzyme inhibitor therapy,Angiotensin II receptor antagonist,Angiotensin Receptor##not very sure
+  mutate(antihypertensive = if_else(cu %in% c("C0003364"),1,0)) %>% #Antihypertensive Agents
+  mutate(antiplatelet = if_else(cu %in% c("C0085826"),1,0)) %>% #Antiplatelet Agents
+  mutate(atherosclerosis = if_else(cu %in% c("C0004153","C0333482"),1,0)) %>% # Atherosclerosis,atherosclerotic
+  mutate(af =if_else(cu %in% c("C0004238"),1,0)) %>% #Atrial Fibrillation(#partten, duration)
+  
+  
+smallfilter<- singlecode %>%
+  filter(ageinyear==0) %>%
+  filter(gender==0) %>%
+  filter(race==0) %>%
+  filter(geolocation==0) %>%
+  filter(!cu %in% c("C1549445","C1705108","C0332197")) %>% #yes/no indicater, yes,absent,
+  filter(bmi==0) %>%
+  filter(bodyweight==0) %>%
+  filter(smoke==0) %>%
+  filter(bloodpressure==0) %>%
+  filter(crp==0) %>%
+  filter(bantagonists==0) %>%
+  filter(alcohol==0) %>%
+  filter(angina ==0) %>%
+  filter(aceinhibitor==0) %>%
+  filter(antihypertensive==0) %>%
+  filter(antiplatelet==0) %>%
+  filter(atherosclerosis==0) %>%
+  filter(af==0) 
+  
+
+
+multicode<- rmdup %>%
+  filter(cu != cuis_selected) %>%
+  arrange(id) %>%
+  group_by(paperid) %>%
+  filter(!duplicated(cuis_selected))
+
+
+numcount<- as.data.frame(freq(rmdup$cu)) 
+setDT(numcount, keep.rownames = TRUE)[]
+
+numcount<- numcount %>%
+  rename(cu=rn) %>%
+  as.data.frame() 
+
+numcount$cu<- as.factor(numcount$cu)
+write.csv(numcount,"E:/cuiscount.csv")
+
+numcount2<- numcount %>%
+  left_join(rmdup,by="cu") %>%
+  group_by(cu)%>%
+  slice(1) 
+
+
+
